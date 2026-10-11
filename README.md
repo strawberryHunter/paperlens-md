@@ -34,3 +34,15 @@ python -m pytest -q
 
 - https://doi.org/10.1021/acs.jcim.3c00599
 - https://doi.org/10.1038/s42003-023-04653-0
+
+
+## Release gates (v0.3)
+1. Input: reject corrupt/encrypted/non-text PDFs, pages >100, upload >50 MB.
+2. Provenance: retain only candidates whose value is reproducibly present on the original PDF page.
+3. Scientific review: mark multi-value parameters and large time steps for manual review; never auto-label these as proven errors.
+4. CI: test parser, deliberate false provenance, sample PDFs and regression cases before release.
+
+A green CI run shows only that programmed tests passed, not that extraction accuracy is high.
+Before any accuracy claim, assemble a human-annotated, openly redistributable benchmark split into development/test sets, including positive and negative contexts, main text and supplementary documents. Report field-level precision, recall, F1, failure cases, and dataset version.
+
+**Known limitations:** rule-based extraction can treat negation, citations, and other unrelated simulations as valid text matches. Page-level verification is necessary but NOT sufficient for scientific evidence. No cross-document or within-paper protocol grouping; scanned PDFs need OCR. Never represent the number of extracted fields as a scientific confidence percentage.
