@@ -31,8 +31,15 @@ else:
     st.info("Upload a PDF or enable the demo."); st.stop()
 if not any(p.strip() for p in pages):
     st.error("No selectable PDF text detected; scanned documents are not yet supported."); st.stop()
-records=analyze_pages(pages)
+st.subheader("Analysis scope")
+first,last=st.slider("PDF page range to examine",1,len(pages),(1,len(pages))) if len(pages)>1 else (1,1)
+st.caption("Limit the scan to Methods pages to reduce false positives from Introduction or References. Page numbers are PDF indices, not printed journal page numbers.")
+records=analyze_pages(pages[first-1:last])
+for record in records:
+    record.page += first-1
+
 st.metric("Candidate evidence matches",len(records))
+st.caption(f"Scanned PDF pages {first}–{last} of {len(pages)}. A match is not a verified method parameter.")
 tab1,tab2,tab3=st.tabs(["📋 Extracted methods","⚠️ Review checklist","📖 PDF evidence"])
 with tab1:
     st.info("Different systems and experiments may appear in one paper; do not combine all matches into a single simulation.")
