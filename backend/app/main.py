@@ -41,6 +41,8 @@ def health():
 @app.post("/api/v1/analyze")
 async def analyze(file: UploadFile = File(...)):
     """Read one PDF with a strict byte/page bound; no app-level document saving."""
+    if os.getenv("PAPERLENS_UPLOADS_ENABLED", "false").strip().lower() != "true":
+        raise HTTPException(status_code=503, detail="PDF analysis is disabled on this deployment pending security review.")
     if Path(file.filename or "").suffix.lower() != ".pdf":
         raise HTTPException(status_code=415, detail="Only .pdf files are supported.")
     chunks = []
