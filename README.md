@@ -62,3 +62,13 @@ Regression cases: `test_context_review.py`. Check GitHub Actions for an actual s
 - Added `test_ui_smoke.py` using Streamlit AppTest to catch render-time exceptions on the synthetic demo.
 
 **Verification:** Confirm an actual green GitHub Actions run and perform browser checks before describing this UI as production ready. Semantic extraction accuracy still requires an independently annotated dataset.
+
+## v0.6 — Document-first workspace
+- Simplified layout based on the PaperLens two-panel reading concept: paper / extracted methods.
+- Clicking an extracted candidate synchronizes the highlighted excerpt and the original PDF page preview.
+- Kept manual context holds and source-provenance rejects out of CSV/JSON exports.
+- Source highlights escape untrusted PDF markup; in-memory PDF page rendering has regression tests.
+- The default example loads when no PDF is supplied and is explicitly synthetic.
+- MD timestep extraction now covers both "timestep of 4 fs" and "4 fs timestep".
+
+**Release verification:** Python compilation and three local UI-helper regression tests passed during development, but the full Streamlit UI smoke test and public deployment have not yet been confirmed green. PDF page matches are evidence references, not scientific certification.
