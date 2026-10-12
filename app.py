@@ -1,5 +1,6 @@
 """PaperLens MD — calm reading workspace for evidence-grounded methods review."""
 import json
+import hashlib
 
 import fitz
 import pandas as pd
@@ -7,6 +8,7 @@ import streamlit as st
 
 from analyzer import analyze_pages, checklist, export_records
 from validation import report
+from protocol_groups import annotate
 from display_helpers import marked_excerpt, pdf_page_png
 
 st.set_page_config(
@@ -116,73 +118,113 @@ held = results["context_review"]
 rejected = results["rejected"]
 
 st.markdown('<div class="paperlens-kicker">LIBRARY / DOCUMENT 01</div>', unsafe_allow_html=True)
-title_col, status_col = st.columns([4, 1], vertical_alignment="center")
-with title_col:
-    st.title("Simulation methods")
-with status_col:
-    st.caption(f"{len(methods)} candidates · {len(flags) + len(held) + len(rejected)} to review")
+st.title("Simulation methods")
 st.markdown(
-    '<div class="paperlens-sub">Inspect each extracted parameter alongside its exact source. '
-    'Text matches are not confirmation that the method was used.</div>',
+    '<div class="paperlens-sub">Source evidence on the left. Explicitly labeled systems and stages on the right. '
+    'Unlabeled candidates are never merged into a reconstructed protocol.</div>',
     unsafe_allow_html=True,
 )
 
-if "selected_candidate" not in st.session_state:
-    st.session_state.selected_candidate = 0
-if methods:
-    st.session_state.selected_candidate = min(st.session_state.selected_candidate, len(methods) - 1)
+contexts = annotate(methods, pages)
+pairs = list(zip(methods, contexts))
+system_labels = ["All systems"] + sorted({context.system for context in contexts})
+selection_left, selection_right = st.columns([1, 2], vertical_alignment="bottom")
+with selection_left:
+    system_filter = st.selectbox("System filter", system_labels, help="Labels are only assigned when explicitly stated in the same sentence.")
+with selection_right:
+    st.caption(f"{len(methods)} candidate(s) · {len(held)} context hold(s) · {len(rejected)} source mismatch(es)")
+    st.caption("A method may occur in more than one experiment; rows remain independent source candidates.")
 
+visible = [i for i, ctx in enumerate(contexts) if system_filter == "All systems" or ctx.system == system_filter]
+visible.sort(key=lambda i: (
+    contexts[i].system in ("Unassigned", "Ambiguous"),
+    contexts[i].system, contexts[i].stage, methods[i].page, methods[i].source_start or 0
+))
 paper_col, method_col = st.columns([1, 1], gap="small")
-with paper_col:
-    with st.container(border=True):
-        st.subheader("Paper")
-        if methods:
-            selection = methods[st.session_state.selected_candidate]
-            st.caption(f"PDF page {selection.page} · evidence for {selection.field}")
-            if pdf_bytes is not None:
-                try:
-                    st.image(pdf_page_png(pdf_bytes, selection.page, selection.value), use_container_width=True)
-                except (ValueError, RuntimeError, fitz.FileDataError) as exc:
-                    st.info(f"PDF preview unavailable: {exc}")
-            st.markdown(marked_excerpt(selection.excerpt, selection.value), unsafe_allow_html=True)
-            st.markdown('<div class="footnote">Source match highlighted · review the full Methods and SI for context.</div>', unsafe_allow_html=True)
-        else:
-            st.info("No candidate matches. Try another page range.")
-
+selected = None
+selected_context = None
 with method_col:
     with st.container(border=True):
         st.subheader("Extracted methods")
-        if methods:
-            for i, item in enumerate(methods):
-                col_a, col_b = st.columns([5, 1], vertical_alignment="center")
-                with col_a:
-                    if st.button(
-                        f"{item.field}  ·  {item.value}",
-                        key=f"candidate_{i}",
-                        type="primary" if i == st.session_state.selected_candidate else "secondary",
-                        use_container_width=True,
-                    ):
-                        st.session_state.selected_candidate = i
-                        st.rerun()
-                with col_b:
-                    st.caption(f"p. {item.page}")
+        st.caption("Click a row to inspect the supporting sentence and PDF page.")
+        if visible:
+            display = pd.DataFrame([
+                {
+                    "Parameter": methods[i].field,
+                    "Value": methods[i].value,
+                    "System": contexts[i].system,
+                    "Stage": contexts[i].stage,
+                    "Page": methods[i].page,
+                    "Review": contexts[i].status,
+                }
+                for i in visible
+            ])
+            document_key = hashlib.sha256(
+                pdf_bytes if pdf_bytes is not None else DEMO.encode("utf-8")
+            ).hexdigest()[:12]
+            key = f"evidence_{document_key}_{first}_{last}_{system_filter}"
+            event = st.dataframe(
+                display,
+                on_select="rerun",
+                selection_mode="single-row",
+                key=key,
+                hide_index=True,
+                use_container_width=True,
+                height=min(520, max(170, len(display) * 35 + 52)),
+            )
+            selection_rows = event.selection.rows
+            row_number = selection_rows[0] if selection_rows else 0
+            selected_index = visible[row_number]
+            selected, selected_context = pairs[selected_index]
         else:
-            st.caption("No methods detected.")
-        st.divider()
-        st.caption("Select any row to inspect the original PDF page and the supporting excerpt.")
+            st.info("No source candidates for this system filter.")
+        st.caption("Unassigned = not stated nearby. Ambiguous = multiple possible labels. Neither is an experimental grouping.")
 
-st.markdown('<div class="footnote">A candidate is a matched term on a PDF page, not an independently verified simulation setting.</div>', unsafe_allow_html=True)
+with paper_col:
+    with st.container(border=True):
+        st.subheader("Paper")
+        if selected is None:
+            st.info("Choose an extracted method to view its evidence.")
+        else:
+            st.caption(f"PDF page {selected.page}  /  {selected.field}  /  {selected.value}")
+            st.markdown(
+                marked_excerpt(selected_context.source_sentence, selected.value),
+                unsafe_allow_html=True,
+            )
+            st.caption(f"System: {selected_context.system}  ·  Stage: {selected_context.stage}  ·  {selected_context.status}")
+            if pdf_bytes is not None and st.checkbox(
+                "Preview original PDF page", value=False,
+                key=f"page_preview_{document_key}_{selected.page}_{selected_index}"
+            ):
+                try:
+                    st.image(
+                        pdf_page_png(pdf_bytes, selected.page, selected.value),
+                        use_container_width=True,
+                        caption=f"PDF page {selected.page}"
+                    )
+                except (ValueError, RuntimeError, fitz.FileDataError) as exc:
+                    st.info(f"PDF page preview unavailable: {exc}")
+            elif pdf_bytes is None:
+                st.caption("Synthetic example: no original PDF page image.")
+            st.markdown(
+                '<div class="footnote">A page-matched phrase is not proof of an experimental setting. '
+                'Verify full context and Supporting Information.</div>',
+                unsafe_allow_html=True,
+            )
 
 review_tab, export_tab = st.tabs(["Review notes", "Export & audit"])
 with review_tab:
-    if not flags and not held and not rejected:
+    ambiguous = [ctx for ctx in contexts if ctx.status == "Review"]
+    if ambiguous:
+        st.warning(f"{len(ambiguous)} candidate(s) mention conflicting systems or stages. They are NOT auto-assigned.")
+    if not flags and not held and not rejected and not ambiguous:
         st.info("No rule-based flags. This does not certify scientific reliability.")
     for flag in flags:
         with st.expander(f"{flag.title} · {flag.level}"):
             st.write(flag.explanation)
             st.caption("Source PDF pages: " + ", ".join(map(str, flag.pages)))
     if held:
-        st.warning(f"{len(held)} potentially negated or ambiguous candidate(s) withheld from export.")
+        st.warning(f"{len(held)} possibly negated or uncertain candidate(s) withheld from export.")
         for record in held:
             with st.expander(f"Context review: {record.field} · {record.value}"):
                 st.write(record.excerpt)
@@ -191,13 +233,28 @@ with review_tab:
         st.error(f"{len(rejected)} candidate(s) rejected: original value/page mismatch.")
     with st.expander("Reporting checklist"):
         st.dataframe(pd.DataFrame(checklist(methods)), hide_index=True, use_container_width=True)
-        st.caption("Not detected ≠ unreported. Supporting information may contain additional Methods details.")
+        st.caption("Not detected is NOT equivalent to not reported.")
+
 with export_tab:
-    table = pd.DataFrame(export_records(methods), columns=["field", "value", "page", "excerpt"])
+    data = [
+        {
+            **export_records([record])[0],
+            "system_hint": context.system,
+            "stage_hint": context.stage,
+            "grouping_status": context.status,
+            "source_sentence": context.source_sentence,
+        }
+        for record, context in pairs
+    ]
+    st.warning(
+        "Exports are evidence CANDIDATES, not verified simulation protocols. "
+        "System/stage fields are sentence-level hints and must not be used to automatically pool results."
+    )
+    table = pd.DataFrame(data)
     st.dataframe(table, use_container_width=True, hide_index=True)
     st.download_button("Download CSV", table.to_csv(index=False).encode("utf-8-sig"), "paperlens_methods.csv", "text/csv")
-    st.download_button("Download JSON", json.dumps(export_records(methods), ensure_ascii=False, indent=2), "paperlens_methods.json", "application/json")
-    st.caption("Held and rejected matches are excluded. Verify every exported candidate manually.")
+    st.download_button("Download JSON", json.dumps(data, ensure_ascii=False, indent=2), "paperlens_methods.json", "application/json")
+    st.caption("Negated/rejected values are excluded; ambiguous labels require manual review.")
 
 st.divider()
 st.caption("PaperLens MD · prototype · no independent accuracy benchmark yet. Only upload documents you are authorized to process.")
