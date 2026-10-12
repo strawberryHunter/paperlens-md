@@ -70,3 +70,19 @@ def test_cors_allows_local_frontend_only():
         headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "POST"},
     )
     assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+
+def test_cors_allows_explicit_ipv4_loopback_origin():
+    response = client.options(
+        "/api/v1/analyze",
+        headers={"Origin": "http://127.0.0.1:3000", "Access-Control-Request-Method": "POST"},
+    )
+    assert response.headers.get("access-control-allow-origin") == "http://127.0.0.1:3000"
+
+
+def test_cors_rejects_untrusted_origin():
+    response = client.options(
+        "/api/v1/analyze",
+        headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"},
+    )
+    assert response.headers.get("access-control-allow-origin") is None
