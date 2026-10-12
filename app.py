@@ -1,131 +1,240 @@
+"""PaperLens MD — evidence-first methods reading workspace."""
 import json
+
 import fitz
 import pandas as pd
 import streamlit as st
+
 from analyzer import analyze_pages, checklist, export_records
 from validation import report
 
-st.set_page_config(page_title="PaperLens | Methods Intelligence", page_icon="◈", layout="wide", initial_sidebar_state="collapsed")
-st.markdown("""
+
+st.set_page_config(
+    page_title="PaperLens — Methods workspace",
+    page_icon="📄",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+st.markdown(
+    """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
-html, body, [class*="css"], [data-testid="stAppViewContainer"] {font-family:'DM Sans',sans-serif;}
-[data-testid="stAppViewContainer"] {background:#0b1120;color:#e7effb;}
-[data-testid="stHeader"] {background:transparent;}
-.block-container {max-width:1220px;padding-top:1.8rem;padding-bottom:4rem;}
-h1,h2,h3 {font-family:'Space Grotesk',sans-serif!important;letter-spacing:-.035em;color:#f1f6ff!important;}
-h1 {font-size:2.4rem!important;}
-p, label, .stMarkdown {color:#c1cee0;}
-.hero {background:linear-gradient(120deg,#132b42 0%,#162041 70%,#251c43 100%);border:1px solid #293b57;border-radius:20px;padding:27px 30px;margin-bottom:20px;}
-.eyebrow {color:#80dfe2;letter-spacing:.17em;font-size:.72rem;font-weight:700;margin-bottom:10px;}
-.hero-title {font-size:2.1rem;line-height:1.15;color:#f4f8ff;font-weight:700;letter-spacing:-.045em;font-family:'Space Grotesk',sans-serif;}
-.hero-sub {color:#a4bad3;margin-top:10px;line-height:1.5;}
-.kpi {border:1px solid #2c3b54;background:#141f33;border-radius:15px;padding:18px 20px;min-height:102px;}
-.kpi-name {color:#90a6c3;font-size:.77rem;}
-.kpi-number {font-size:1.9rem;font-weight:700;letter-spacing:-.04em;color:#f1f8ff;}
-.kpi-number.warn {color:#f6c97f;}
-[data-testid="stFileUploader"] {border:1px solid #34445f;border-radius:14px;padding:12px;background:#131d31;}
-[data-testid="stFileUploaderDropzone"] {background:#17253a;border-color:#405273;}
-[data-baseweb="tab-list"] {gap:10px;}
-button[data-baseweb="tab"] {background:#16253a;border-radius:9px;color:#d2def0;padding:9px 15px;}
-button[data-baseweb="tab"][aria-selected="true"] {background:#294965;color:#fff;}
-[data-testid="stDataFrame"], [data-testid="stExpander"] {border:1px solid #2d4059;border-radius:12px;}
-[data-testid="stAlert"] {border-radius:12px;}
-.small-note {font-size:.79rem;color:#91a6c3;margin:12px 0;}
+/* Light editorial UI. Content and source evidence, not decorative dashboards. */
+[data-testid="stAppViewContainer"] {background: #fbfcfd;}
+[data-testid="stHeader"] {background: rgba(251,252,253,.94);}
+.block-container {max-width: 1420px; padding-top: 1.65rem; padding-bottom: 3.25rem;}
+h1, h2, h3 {font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+             letter-spacing: -0.035em !important; color: #172331 !important;}
+h1 {font-size: 1.85rem !important; font-weight: 680 !important;}
+h2 {font-size: 1.13rem !important;}
+[data-testid="stSidebar"] {background:#f3f5f7; border-right:1px solid #e5e9ed;}
+[data-testid="stSidebar"] hr {border-color:#e0e6ed;}
+[data-testid="stMetric"] {background:transparent;border:0;}
+[data-testid="stMetricLabel"] {font-size:.78rem;}
+[data-testid="stMetricValue"] {font-size:1.45rem;}
+[data-testid="stFileUploaderDropzone"] {background:#fff;border:1px dashed #b9c6d3;border-radius:8px;}
+[data-testid="stDataFrame"] {border:1px solid #e5e9ed;border-radius:7px;}
+[data-testid="stExpander"] {border-radius:7px;}
+[data-testid="stAlert"] {border-radius:8px;}
+div[data-testid="stButton"] button, div[data-testid="stDownloadButton"] button {border-radius:7px;}
+[data-baseweb="tab-list"] {gap:1rem;}
+[data-baseweb="tab"] {font-size:.93rem;}
+.brand-row {font-size:.80rem;letter-spacing:.01em;color:#637184;margin-bottom:.7rem;}
+.brand-row strong {color:#25364a;font-weight:750;font-size:.91rem;}
+.workspace-note {color:#667689;font-size:.84rem;line-height:1.6;margin:.4rem 0 1.25rem;}
+.stage-label {font-size:.75rem;font-weight:650;color:#647489;letter-spacing:.015em;margin-top:1rem;}
+.review-dot {display:inline-block;background:#ad7737;width:7px;height:7px;border-radius:50%;margin-right:6px;}
+.footer-rule {border-top:1px solid #e5e9ed;margin-top:1.6rem;padding-top:1rem;
+              font-size:.77rem;color:#758194;}
 </style>
-""",unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
-st.markdown('<div class="hero"><div class="eyebrow">◈ PAPERLENS / SCIENTIFIC INTELLIGENCE</div><div class="hero-title">Methods Intelligence</div><div class="hero-sub">Turn research PDFs into traceable simulation evidence, scientific review flags and structured reports.</div></div>',unsafe_allow_html=True)
+st.markdown(
+    '<div class="brand-row"><strong>paperlens</strong> &nbsp; / &nbsp; METHODS WORKSPACE</div>',
+    unsafe_allow_html=True,
+)
+st.title("Read the methods. Check the evidence.")
+st.markdown(
+    '<div class="workspace-note">Extract molecular-dynamics settings with a direct path back to their source. '
+    'Candidate matches are not confirmed experimental facts.</div>',
+    unsafe_allow_html=True,
+)
+
 with st.sidebar:
-    st.header("About PaperLens")
-    st.write("Evidence-first PDF methods scanner. Pattern matches are candidates, never validated scientific conclusions.")
-    st.link_button("View source on GitHub","https://github.com/strawberryHunter/paperlens-md")
-    st.caption("v0.3 · Rule-based prototype")
-demo=("Molecular dynamics simulations were performed using GROMACS 2024.1 and the CHARMM36m force field. "
-      "The TIP3P water model was used. Following NVT and NPT equilibration at 300 K and 1 bar, "
-      "five independent replicas were run for 30 ns each. A time step of 4 fs was used with "
-      "hydrogen mass repartitioning (HMR), LINCS, PME, Nose-Hoover and Parrinello-Rahman.")
+    st.markdown("### Workspace")
+    st.caption("PaperLens MD · v0.5")
+    st.markdown("**Document input**")
+    upload = st.file_uploader("Select a text-based PDF", type="pdf", help="Max 50 MB · 100 PDF pages")
+    use_demo = st.toggle("Use synthetic example", value=upload is None)
+    st.divider()
+    st.markdown("**Reading guide**")
+    st.caption("1. Choose a PDF and page range.\n\n2. Select a candidate to inspect its evidence.\n\n3. Review context warnings before exporting.")
+    st.divider()
+    st.link_button("GitHub source", "https://github.com/strawberryHunter/paperlens-md")
+    st.caption("Rule-based research prototype, not a scientific validator.")
 
-left,right=st.columns([2,1],gap="large")
-with left:
-    st.subheader("01 / Document")
-    upload=st.file_uploader("Choose a text-based research PDF (max 50 MB)",type="pdf")
-with right:
-    st.subheader("Analysis mode")
-    use_demo=st.toggle("Synthetic sample",value=upload is None)
-    st.caption("Try the workflow without uploading a manuscript.")
+demo = (
+    "Molecular dynamics simulations were performed using GROMACS 2024.1 and "
+    "the CHARMM36m force field. The TIP3P water model was used. "
+    "Following NVT and NPT equilibration at 300 K and 1 bar, "
+    "five independent replicas were run for 30 ns each. "
+    "A time step of 4 fs was used with hydrogen mass repartitioning "
+    "(HMR), LINCS, PME, Nose-Hoover and Parrinello-Rahman."
+)
+
+pdf_bytes = None
 if upload is not None and not use_demo:
-    data=upload.getvalue()
-    if len(data)>50*1024*1024:
-        st.error("The PDF exceeds 50 MB.");st.stop()
+    pdf_bytes = upload.getvalue()
+    if len(pdf_bytes) > 50 * 1024 * 1024:
+        st.error("PDF exceeds the 50 MB upload limit.")
+        st.stop()
     try:
-        with fitz.open(stream=data,filetype="pdf") as doc:
-            if len(doc)>100:
-                st.error("Limit of 100 PDF pages per run.");st.stop()
-            pages=[p.get_text(sort=True) for p in doc]
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+            if len(doc) > 100:
+                st.error("The current reader supports up to 100 PDF pages.")
+                st.stop()
+            pages = [p.get_text(sort=True) for p in doc]
     except Exception as exc:
-        st.error(f"PDF extraction failed: {exc}");st.stop()
+        st.error(f"PDF could not be read: {exc}")
+        st.stop()
 elif use_demo:
-    pages=[demo]
+    pages = [demo]
 else:
-    st.info("Upload a PDF or enable the synthetic demo.");st.stop()
-if not any(p.strip() for p in pages):
-    st.error("No machine-readable text found. Scanned PDFs need OCR, which is not supported yet.");st.stop()
+    st.info("Choose a PDF from the left sidebar, or turn on the synthetic example.")
+    st.stop()
 
-st.subheader("02 / Analysis scope")
-first,last=st.slider("Scan PDF pages",1,len(pages),(1,len(pages))) if len(pages)>1 else (1,1)
-st.caption("Select Methods pages to reduce citations and background false positives. Pages are PDF indices, not printed article pagination.")
-selected_pages=pages[first-1:last]
-records=analyze_pages(selected_pages)
-for item in records: item.page+=first-1
-result=report(records,pages)
-approved=result["valid"]; flags=result["findings"]; context_review=result["context_review"]
-m1,m2,m3,m4=st.columns(4,gap="small")
-for col,label,value,warn in [
-    (m1,"CANDIDATE MATCHES",len(records),False),
-    (m2,"EVIDENCE VERIFIED",len(approved),False),
-    (m3,"REVIEW FLAGS",result["summary"]["review_flags"],True),
-    (m4,"REJECTED EVIDENCE",len(result["rejected"]),bool(result["rejected"]))]:
-    with col:
-        st.markdown(f'<div class="kpi"><div class="kpi-name">{label}</div><div class="kpi-number {"warn" if warn else ""}">{value}</div></div>',unsafe_allow_html=True)
+if not any(page.strip() for page in pages):
+    st.error("No machine-readable text was detected. OCR is not included in this version.")
+    st.stop()
 
-st.markdown(f'<div class="small-note">Evidence verified = matching PDF-page value passing a basic negation screen, not scientific confirmation. {len(context_review)} ambiguous candidate(s) quarantined for review.</div>',unsafe_allow_html=True)
-if not result["gate_passed"]:
-    st.error("Evidence provenance gate failed. Rejected values are excluded from all downloads.")
-st.subheader("03 / Results workspace")
-tab1,tab2,tab3=st.tabs(["◈ Protocol Explorer","⚑ Scientific Review","▣ Evidence Audit"])
-with tab1:
-    st.caption("Do not merge values from different systems or stages. Verify extracted results against the original paper and supporting information.")
-    table=pd.DataFrame(export_records(approved),columns=["field","value","page","excerpt"])
-    if table.empty: st.info("No candidate methods found. Try narrowing or changing the PDF page range.")
+st.markdown('<div class="stage-label">DOCUMENT SCOPE</div>', unsafe_allow_html=True)
+range_col, metadata_col = st.columns([2.5, 1], vertical_alignment="bottom")
+with range_col:
+    if len(pages) > 1:
+        first, last = st.slider("PDF pages to scan", 1, len(pages), (1, len(pages)))
     else:
-        filter_field=st.selectbox("Method category",["All"]+sorted(table.field.unique().tolist()))
-        shown=table if filter_field=="All" else table[table.field==filter_field]
-        st.dataframe(shown,use_container_width=True,hide_index=True)
-    st.download_button("↓ Export evidence CSV",table.to_csv(index=False).encode("utf-8-sig"),"paperlens_methods.csv","text/csv")
-    st.download_button("↓ Export evidence JSON",json.dumps(export_records(approved),ensure_ascii=False,indent=2),"paperlens_methods.json","application/json")
-with tab2:
-    if not flags: st.success("No rule-based review flags from detected candidates. This does not certify the simulation.")
-    for f in flags:
-        with st.container(border=True):
-            st.markdown(f"**{f.title}** · `{f.level.upper()}`")
-            st.write(f.explanation)
-            st.caption("Evidence pages: "+", ".join(map(str,f.pages)))
-    if context_review:
-        st.warning(f"{len(context_review)} potentially negated or ambiguous candidate(s) withheld from exports. Review the original PDF before accepting them.")
-        for item in context_review:
-            with st.expander(f"Context review: {item.field} / {item.value} · p.{item.page}"):
-                st.write(item.excerpt)
-    st.markdown("**Methods reporting checklist**")
-    st.dataframe(pd.DataFrame(checklist(approved)),use_container_width=True,hide_index=True)
-    st.warning("Not detected means parser did not find it; it does NOT mean the authors failed to report it.")
-with tab3:
-    if not approved: st.info("No verified PDF text matches yet.")
-    for i,item in enumerate(approved):
-        with st.expander(f"{item.field}  /  {item.value}  ·  PDF p.{item.page}",expanded=i==0):
-            st.markdown(f"**Source page {item.page}**")
-            st.write(item.excerpt)
-    if result["rejected"]:
-        st.error(f"{len(result['rejected'])} candidate(s) rejected because page-value provenance could not be established.")
+        first, last = (1, 1)
+        st.caption("Scanning the one-page synthetic example.")
+with metadata_col:
+    st.caption(f"{len(pages)} PDF page(s) · pages {first}–{last} selected")
+st.caption("Restrict the scan to Methods pages where possible. PDF indices may differ from printed journal page numbers.")
+
+records = analyze_pages(pages[first - 1:last])
+for item in records:
+    item.page += first - 1
+result = report(records, pages)
+approved = result["valid"]
+context_review = result["context_review"]
+rejected = result["rejected"]
+flags = result["findings"]
+
 st.divider()
-st.caption("Prototype release · No independent benchmark accuracy available yet. No manuscript storage implemented in the app code; hosting-provider handling is separate. Upload only material permitted by its confidentiality policy.")
+st.markdown("#### Review summary")
+a, b, c = st.columns(3)
+a.metric("Page-matched candidates", len(approved))
+b.metric("Scientific review flags", result["summary"]["review_flags"])
+c.metric("Context / provenance holds", len(context_review) + len(rejected))
+st.caption(
+    "Page-matched means the reported value occurs on the cited PDF page and passed "
+    "a basic heuristic negation check. It does not prove that the method was used."
+)
+if rejected:
+    st.error(f"{len(rejected)} source mismatches were removed from export.")
+if context_review:
+    st.warning(f"{len(context_review)} possibly negated or ambiguous matches are withheld for manual review.")
+
+st.markdown("#### Methods & source")
+methods_tab, review_tab, export_tab = st.tabs(["Reading desk", "Review queue", "Export"])
+
+with methods_tab:
+    table_col, evidence_col = st.columns([1.1, 1], gap="large")
+    with table_col:
+        st.markdown("**Extracted parameters**")
+        if not approved:
+            st.info("No candidates passed the current screening rules.")
+        else:
+            table = pd.DataFrame(export_records(approved))
+            display = table[["field", "value", "page"]].rename(
+                columns={"field": "Parameter", "value": "Candidate", "page": "PDF page"}
+            )
+            st.dataframe(display, hide_index=True, use_container_width=True, height=340)
+        st.caption("Different stages or systems must not be combined without checking their contexts.")
+    with evidence_col:
+        st.markdown("**Source inspection**")
+        if approved:
+            options = list(range(len(approved)))
+            selected_index = st.selectbox(
+                "Select a candidate",
+                options,
+                format_func=lambda i: f"{approved[i].field} · {approved[i].value}  (p. {approved[i].page})",
+            )
+            selected = approved[selected_index]
+            st.caption(f"PDF page {selected.page} · {selected.field}")
+            st.text_area(
+                "Nearby source text",
+                selected.excerpt,
+                height=150,
+                disabled=True,
+            )
+            if pdf_bytes is not None:
+                show_page = st.checkbox("Show source PDF page", value=False)
+                if show_page:
+                    try:
+                        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+                            pix = doc[selected.page - 1].get_pixmap(
+                                matrix=fitz.Matrix(1.25, 1.25), alpha=False
+                            )
+                            st.image(pix.tobytes("png"), caption=f"PDF page {selected.page}", use_container_width=True)
+                    except Exception as exc:
+                        st.error(f"Cannot preview this page: {exc}")
+            else:
+                st.caption("Synthetic example — no PDF page image.")
+        else:
+            st.caption("Evidence will appear after a candidate is selected.")
+
+with review_tab:
+    if not flags and not context_review and not rejected:
+        st.info("No rule-based review flags. This is not a scientific certification.")
+    for finding in flags:
+        with st.expander(f"{finding.title} · {finding.level.upper()}"):
+            st.write(finding.explanation)
+            st.caption("Referenced PDF pages: " + ", ".join(map(str, finding.pages)))
+    if context_review:
+        st.markdown("**Context holds — excluded from download**")
+        for item in context_review:
+            with st.expander(f"{item.field}: {item.value} · p. {item.page}"):
+                st.write(item.excerpt)
+    if rejected:
+        st.markdown("**Provenance rejected**")
+        st.caption(f"{len(rejected)} results have no verified matching value at their claimed PDF page.")
+    st.markdown("**Reporting checklist**")
+    st.dataframe(pd.DataFrame(checklist(approved)), hide_index=True, use_container_width=True)
+    st.caption("Not detected means the parser did not find it. Inspect the source and supporting information.")
+
+with export_tab:
+    st.markdown("**Download reviewed evidence candidates**")
+    st.caption(
+        "Excluded contextual and provenance holds do not appear in these files. "
+        "A reviewer must still assess relevance, experimental stage and scientific accuracy."
+    )
+    data = export_records(approved)
+    table = pd.DataFrame(data, columns=["field", "value", "page", "excerpt"])
+    st.download_button(
+        "Download CSV",
+        table.to_csv(index=False).encode("utf-8-sig"),
+        "paperlens_methods.csv", "text/csv"
+    )
+    st.download_button(
+        "Download JSON",
+        json.dumps(data, ensure_ascii=False, indent=2),
+        "paperlens_methods.json", "application/json"
+    )
+
+st.markdown(
+    '<div class="footer-rule">PaperLens MD is a prototype. There is no independently measured extraction '
+    'accuracy yet. The app code does not implement document persistence; hosting-provider handling '
+    'must be evaluated separately. Do not upload confidential manuscripts.</div>',
+    unsafe_allow_html=True,
+)
