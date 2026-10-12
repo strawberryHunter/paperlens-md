@@ -16,3 +16,10 @@ def test_export_and_advisory():
     a=analyze_pages(["The timestep was 4 fs; TIP3P TIP3P."])
     assert any("4–5 fs" in x for x in advisory(a))
     assert sum(x["field"]=="Water model" for x in export_records(a))==1
+
+
+def test_timestep_grammatical_variants():
+    forward = analyze_pages(["A timestep of 4 fs was used."])
+    reverse = analyze_pages(["We applied a 4 fs timestep with HMR."])
+    assert any(item.field == "Time step" and "4 fs" in item.value for item in forward)
+    assert any(item.field == "Time step" and "4 fs" in item.value for item in reverse)
