@@ -14,7 +14,7 @@ def context_screen(record):
     if not match:
         return "review", "Could not locate matching value inside excerpt"
     suffix=text[match.end():match.end()+95]
-    if re.search(r"^(?:\\s+(?:force field|water model|thermostat|barostat|engine|software))?\\s+(?:was|were|is|are)\\s+not\\s+(?:used|employed|applied|selected)", suffix,re.I):
+    if re.search(r"^(?:\s+(?:force field|water model|thermostat|barostat|engine|software))?\s+(?:was|were|is|are)\s+not\s+(?:used|employed|applied|selected)", suffix,re.I):
         return "review", "Explicit post-mention negation detected"
     prefix=text[:match.start()]
     clause=CLAUSE_BREAK.split(prefix)[-1]
