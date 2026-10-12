@@ -49,6 +49,8 @@ def label_for(record, pages):
         )
         if label not in systems:
             systems.append(label)
+    if any(MUTATION.fullmatch(label) for label in systems) and "Mutant (unspecified)" in systems:
+        systems.remove("Mutant (unspecified)")
     stages = []
     for token in STAGE_RE.findall(sentence):
         low = token.lower()
