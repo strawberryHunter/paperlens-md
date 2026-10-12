@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, asdict
 from collections import defaultdict
 from context_review import context_screen
+from protocol_groups import sentence_for
 
 @dataclass(frozen=True)
 class Finding:
@@ -61,7 +62,7 @@ def evaluate(records):
 
 def report(records,pages):
     valid,rejected=verify_evidence(records,pages)
-    screened=[(r, *context_screen(r)) for r in valid]
+    screened=[(r, *context_screen(r, sentence_for(r,pages))) for r in valid]
     contextual_review=[r for r,status,_ in screened if status=='review']
     publishable=[r for r,status,_ in screened if status=='candidate']
     findings=evaluate(publishable)
