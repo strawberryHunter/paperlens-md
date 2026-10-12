@@ -52,3 +52,13 @@ Before any accuracy claim, assemble a human-annotated, openly redistributable be
 Negated candidate matches (e.g. 'CHARMM36m force field was not used' or 'did not use TIP3P') are withheld from downloadable protocols and shown separately for manual review. This is a heuristic, **not** a validated accuracy improvement. It can miss negations or flag valid statements. Evidence verification means page-level text support plus basic screening, not scientific fact checking.
 
 Regression cases: `test_context_review.py`. Check GitHub Actions for an actual successful workflow run before claiming release validation.
+
+
+## v0.5 — Reading workspace design
+- Replaced the marketing-style dark dashboard with a restrained, light, editorial workspace.
+- Moved document upload and guidance to the sidebar; the main view prioritizes extracted methods and their source evidence.
+- Select a candidate to inspect its exact excerpt and (for uploaded PDFs) optionally preview its source page.
+- Separated the reading desk, manual review queue, and export operations. Held/rejected matches remain excluded from downloads.
+- Added `test_ui_smoke.py` using Streamlit AppTest to catch render-time exceptions on the synthetic demo.
+
+**Verification:** Confirm an actual green GitHub Actions run and perform browser checks before describing this UI as production ready. Semantic extraction accuracy still requires an independently annotated dataset.
