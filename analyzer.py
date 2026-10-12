@@ -16,7 +16,7 @@ PATTERNS = {
     "Ensemble": r"\b(?:NVT|NPT|NVE)\b",
     "Temperature": r"\b\d{2,3}(?:\.\d+)?\s*(?:K|kelvin)\b",
     "Pressure": r"\b\d+(?:\.\d+)?\s*(?:bar|atm)\b",
-    "Time step": r"\b(?:time\s*step|timestep|integration\s*step)\s*(?:of|was|=|:)?\s*\d+(?:\.\d+)?\s*(?:fs|ps)\b",
+    "Time step": r"\b(?:(?:time\s*step|timestep|integration\s*step)\s*(?:of|was|=|:)?\s*\d+(?:\.\d+)?\s*(?:fs|ps)|\d+(?:\.\d+)?\s*(?:fs|ps)\s*(?:time\s*step|timestep|integration\s*step))\b",
     "Simulation duration": r"\b\d+(?:\.\d+)?\s*(?:ns|microseconds?|nanoseconds?|µs|μs)\b",
     "Replicas": r"\b\d+\s*(?:independent\s*)?(?:replicas?|replicates?|independent\s+runs?)\b",
     "Thermostat": r"\b(?:Nos[eé][– -]?Hoover|v-rescale|Langevin|Berendsen|Andersen)\b",
