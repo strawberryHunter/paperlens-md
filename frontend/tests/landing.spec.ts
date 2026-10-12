@@ -9,7 +9,7 @@ test("hero matches the product landing structure and remains usable on desktop",
   await page.screenshot({ path: testInfo.outputPath("desktop-landing.png"), fullPage: true });
 });
 
-test("each sample is functional, openly synthetic, and methods have individual evidence", async ({ page }) => {
+test("each sample is functional, openly synthetic, and methods have individual evidence", async ({ page }, testInfo) => {
   await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: /WT & E41A/ }).click();
   await expect(page.getByText("Synthetic multi-system example")).toBeVisible();
@@ -18,6 +18,7 @@ test("each sample is functional, openly synthetic, and methods have individual e
   await page.getByRole("button", { name: /310 K/ }).click();
   await expect(page.getByText("E41A production simulations were performed at 310 K.")).toBeVisible();
   await expect(page.getByRole("button", { name: /Download CSV/ })).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath("methods-workspace.png"), fullPage: true });
   await page.getByRole("button", { name: /GROMACS standard MD/ }).click();
   await expect(page.getByText("Synthetic GROMACS example")).toBeVisible();
 });
