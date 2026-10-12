@@ -3,7 +3,7 @@ import re
 
 NEGATION = re.compile(r"\b(?:not|never|without|instead of|rather than|neither)\b", re.I)
 POST_NEGATION = re.compile(
-    r"^\s+(?:(?:force field|water model|thermostat|barostat|engine|software)\s+)?"
+    r"^\s+(?:(?:force field|water model|model|thermostat|barostat|engine|software)\s+)?"
     r"(?:was|were|is|are)\s+not\s+(?:used|employed|applied|selected|chosen)\b", re.I
 )
 
