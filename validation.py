@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass, asdict
 from collections import defaultdict
 from context_review import context_screen
+from protocol_groups import sentence_for
 
 @dataclass(frozen=True)
 class Finding:
@@ -16,18 +17,26 @@ class Finding:
     pages: tuple
 
 def verify_evidence(records, pages):
-    """Only accept results whose quoted value exists on the cited PDF page."""
+    """Require the cited value at the exact recorded position, when available."""
     valid, rejected = [], []
-    for r in records:
-        page = getattr(r, "page", 0)
-        value = getattr(r, "value", "")
-        if (not isinstance(page, int) or page < 1 or page > len(pages)
-                or not value or not isinstance(value, str)
-                or re.search(r"\s+".join(map(re.escape, value.split())), " ".join(pages[page-1].split()), re.I) is None):
-            rejected.append(r)
+    for record in records:
+        page = getattr(record, "page", None)
+        value = getattr(record, "value", None)
+        if not isinstance(page, int) or page < 1 or page > len(pages) or not isinstance(value, str) or not value:
+            rejected.append(record)
+            continue
+        normalized = " ".join(pages[page - 1].split())
+        start = getattr(record, "source_start", None)
+        end = getattr(record, "source_end", None)
+        if start is not None or end is not None:
+            good = (isinstance(start, int) and isinstance(end, int)
+                    and 0 <= start < end <= len(normalized)
+                    and normalized[start:end].casefold() == value.casefold())
         else:
-            valid.append(r)
+            good = re.search(r"\s+".join(map(re.escape, value.split())), normalized, re.I) is not None
+        (valid if good else rejected).append(record)
     return valid, rejected
+
 
 def evaluate(records):
     by_field = defaultdict(list)
@@ -61,7 +70,7 @@ def evaluate(records):
 
 def report(records,pages):
     valid,rejected=verify_evidence(records,pages)
-    screened=[(r, *context_screen(r)) for r in valid]
+    screened=[(r, *context_screen(r, sentence_for(r,pages))) for r in valid]
     contextual_review=[r for r,status,_ in screened if status=='review']
     publishable=[r for r,status,_ in screened if status=='candidate']
     findings=evaluate(publishable)
