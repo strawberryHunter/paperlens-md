@@ -79,7 +79,7 @@ selected_pages=pages[first-1:last]
 records=analyze_pages(selected_pages)
 for item in records: item.page+=first-1
 result=report(records,pages)
-approved=result["valid"]; flags=result["findings"]
+approved=result["valid"]; flags=result["findings"]; context_review=result["context_review"]
 m1,m2,m3,m4=st.columns(4,gap="small")
 for col,label,value,warn in [
     (m1,"CANDIDATE MATCHES",len(records),False),
@@ -89,7 +89,7 @@ for col,label,value,warn in [
     with col:
         st.markdown(f'<div class="kpi"><div class="kpi-name">{label}</div><div class="kpi-number {"warn" if warn else ""}">{value}</div></div>',unsafe_allow_html=True)
 
-st.markdown('<div class="small-note">Evidence verified = matching value found on the cited PDF page. It does NOT verify scientific correctness, experimental grouping or contextual relevance.</div>',unsafe_allow_html=True)
+st.markdown(f'<div class="small-note">Evidence verified = matching PDF-page value passing a basic negation screen, not scientific confirmation. {len(context_review)} ambiguous candidate(s) quarantined for review.</div>',unsafe_allow_html=True)
 if not result["gate_passed"]:
     st.error("Evidence provenance gate failed. Rejected values are excluded from all downloads.")
 st.subheader("03 / Results workspace")
@@ -111,6 +111,11 @@ with tab2:
             st.markdown(f"**{f.title}** · `{f.level.upper()}`")
             st.write(f.explanation)
             st.caption("Evidence pages: "+", ".join(map(str,f.pages)))
+    if context_review:
+        st.warning(f"{len(context_review)} potentially negated or ambiguous candidate(s) withheld from exports. Review the original PDF before accepting them.")
+        for item in context_review:
+            with st.expander(f"Context review: {item.field} / {item.value} · p.{item.page}"):
+                st.write(item.excerpt)
     st.markdown("**Methods reporting checklist**")
     st.dataframe(pd.DataFrame(checklist(approved)),use_container_width=True,hide_index=True)
     st.warning("Not detected means parser did not find it; it does NOT mean the authors failed to report it.")
