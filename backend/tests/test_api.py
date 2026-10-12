@@ -1,12 +1,21 @@
 """Contract tests using in-memory synthetic PDFs; no private manuscripts."""
 from io import BytesIO
 
+import pytest
+
 import fitz
 from fastapi.testclient import TestClient
 
 from backend.app.main import app
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def enable_uploads_for_test_fixtures(monkeypatch):
+    """Enable only inside isolated synthetic-fixture tests, not production."""
+    monkeypatch.setenv("PAPERLENS_UPLOADS_ENABLED", "true")
+
 
 
 def pdf_with(text):
@@ -86,3 +95,10 @@ def test_cors_rejects_untrusted_origin():
         headers={"Origin": "https://evil.example", "Access-Control-Request-Method": "POST"},
     )
     assert response.headers.get("access-control-allow-origin") is None
+
+
+def test_public_uploads_are_off_without_opt_in(monkeypatch):
+    monkeypatch.delenv("PAPERLENS_UPLOADS_ENABLED", raising=False)
+    response = submit(pdf_with("GROMACS 2024.1"))
+    assert response.status_code == 503
+    assert "disabled" in response.json()["detail"]
