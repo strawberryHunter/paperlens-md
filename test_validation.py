@@ -37,3 +37,21 @@ def test_invalid_evidence_fails_gate():
     rows=analyze_pages(pages)
     bad=[replace(rows[0],value="not in PDF")]
     assert not report(bad,pages)["gate_passed"]
+
+
+def test_exact_offset_rejects_incorrect_location_even_if_value_on_page():
+    from dataclasses import replace
+    pages = ["WT ran at 300 K. E41A ran at 310 K."]
+    values = analyze_pages(pages)
+    wt = next(v for v in values if v.field == "Temperature" and v.value == "300 K")
+    fake = replace(wt, source_start=pages[0].index("310 K"), source_end=pages[0].index("310 K") + 5)
+    valid, rejected = verify_evidence([fake], pages)
+    assert not valid
+    assert len(rejected) == 1
+
+
+def test_negation_in_previous_sentence_does_not_contaminate_current_sentence():
+    pages = ["The TIP3P model was not used. Production was instead performed using SPC/E."]
+    result = report(analyze_pages(pages), pages)
+    assert any(item.value == "SPC/E" for item in result["valid"])
+    assert any(item.value == "TIP3P" for item in result["context_review"])
