@@ -46,3 +46,9 @@ A green CI run shows only that programmed tests passed, not that extraction accu
 Before any accuracy claim, assemble a human-annotated, openly redistributable benchmark split into development/test sets, including positive and negative contexts, main text and supplementary documents. Report field-level precision, recall, F1, failure cases, and dataset version.
 
 **Known limitations:** rule-based extraction can treat negation, citations, and other unrelated simulations as valid text matches. Page-level verification is necessary but NOT sufficient for scientific evidence. No cross-document or within-paper protocol grouping; scanned PDFs need OCR. Never represent the number of extracted fields as a scientific confidence percentage.
+
+
+## v0.4 — Conservative context review
+Negated candidate matches (e.g. 'CHARMM36m force field was not used' or 'did not use TIP3P') are withheld from downloadable protocols and shown separately for manual review. This is a heuristic, **not** a validated accuracy improvement. It can miss negations or flag valid statements. Evidence verification means page-level text support plus basic screening, not scientific fact checking.
+
+Regression cases: `test_context_review.py`. Check GitHub Actions for an actual successful workflow run before claiming release validation.
