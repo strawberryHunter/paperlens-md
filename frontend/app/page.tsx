@@ -24,7 +24,7 @@ type Analysis = {
   disclaimer: string;
 };
 
-const API = process.env.NEXT_PUBLIC_PAPERLENS_API_URL || "http://127.0.0.1:8000";
+const API = process.env.NEXT_PUBLIC_PAPERLENS_API_URL || (process.env.NODE_ENV === "development" ? "http://127.0.0.1:8000" : "");
 const MAX_BYTES = 20 * 1024 * 1024;
 
 const samples = [
@@ -187,6 +187,7 @@ export default function Workspace() {
   }
   async function analyze() {
     if (!file || busy) return;
+    if (!API) { setError("Live PDF analysis is not enabled on this deployment yet. Try the interactive samples."); return; }
     if (!file.name.toLowerCase().endsWith(".pdf") || file.size > MAX_BYTES || !file.size) {
       setError("Please choose a nonempty PDF file up to 20 MB.");
       return;
@@ -269,13 +270,13 @@ export default function Workspace() {
             {file ? <>
               <div className="upload-title selected-title"><FileIcon /><span>{file.name}</span></div>
               <p className="upload-helper">{(file.size / (1024 * 1024)).toFixed(2)} MB <span aria-hidden="true">·</span> <button className="link-button" type="button" onClick={() => fileInput.current?.click()} disabled={busy}>choose another PDF</button></p>
-              <button className="analyze-button" type="button" onClick={analyze} disabled={busy || !!error} aria-busy={busy}>
-                {busy ? "Analyzing PDF…" : "Analyze PDF"} {!busy && <ArrowRight />}
+              <button className="analyze-button" type="button" onClick={analyze} disabled={busy || !!error || !API} aria-busy={busy}>
+                {busy ? "Analyzing PDF…" : API ? "Analyze PDF" : "PDF analysis coming soon"} {!busy && <ArrowRight />}
               </button>
             </> : <>
               <h2 className="upload-title">Drop a PDF here</h2>
               <p className="upload-helper">or <button type="button" className="link-button" onClick={() => fileInput.current?.click()} disabled={busy}>browse files</button> <span aria-hidden="true">·</span> .pdf <span aria-hidden="true">·</span> up to 20 MB</p>
-              <p className="upload-detail">Text-based research papers · no scanned PDF support yet</p>
+              <p className="upload-detail">Text-based research papers · no scanned PDF support yet{!API ? " · online analysis not enabled yet" : ""}</p>
             </>}
           </div>
           {error && <div className="error-banner" role="alert">{error}{error.toLowerCase().includes("fetch") || error.toLowerCase().includes("network") ? " Make sure the FastAPI backend is running." : ""}</div>}
