@@ -34,7 +34,7 @@ def analyze_pages(pages):
     found=[]; seen=set()
     for page_number,text in enumerate(pages,1):
         clean=" ".join(text.split())
-        boundaries=[0]+[m.end() for m in re.finditer(r"(?<=[.!?])\\s+(?=[A-Z0-9])|;\\s*", clean)]
+        boundaries=[0]+[m.end() for m in re.finditer(r"(?<=[.!?])\s+(?=[A-Z0-9])|;\s*", clean)]
         for field,rx in REGEX.items():
             for match in rx.finditer(clean):
                 sentence_index=bisect_right(boundaries,match.start())-1
