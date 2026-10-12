@@ -1,5 +1,6 @@
 """Evidence-first candidate extraction; findings require manual validation."""
 import re
+from bisect import bisect_right
 from dataclasses import dataclass, asdict
 
 @dataclass
@@ -8,6 +9,8 @@ class Evidence:
     value: str
     page: int
     excerpt: str
+    source_start: int | None = None
+    source_end: int | None = None
 
 PATTERNS = {
     "MD engine": r"\b(?:GROMACS(?:\s*\d{4}(?:\.\d+)?)?|OpenMM(?:\s*\d+(?:\.\d+)*)?|NAMD|AMBER|Desmond|LAMMPS)\b",
@@ -31,12 +34,14 @@ def analyze_pages(pages):
     found=[]; seen=set()
     for page_number,text in enumerate(pages,1):
         clean=" ".join(text.split())
+        boundaries=[0]+[m.end() for m in re.finditer(r"(?<=[.!?])\\s+(?=[A-Z0-9])|;\\s*", clean)]
         for field,rx in REGEX.items():
             for match in rx.finditer(clean):
-                key=(field,page_number,match.group().lower())
+                sentence_index=bisect_right(boundaries,match.start())-1
+                key=(field,page_number,sentence_index,match.group().lower())
                 if key in seen: continue
                 seen.add(key)
-                found.append(Evidence(field,match.group(),page_number,clean[max(0,match.start()-110):match.end()+130]))
+                found.append(Evidence(field,match.group(),page_number,clean[max(0,match.start()-110):match.end()+130],match.start(),match.end()))
                 if len(found)>=500: return found
     return found
 
