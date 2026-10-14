@@ -23,3 +23,8 @@ def test_value_must_occur_inside_excerpt():
     page = "TIP3P was used. GROMACS 2024.1 was used."
     record = Evidence("Water model", "TIP3P", 1, "GROMACS 2024.1 was used.")
     assert verify_evidence([record], [page]) == ([], [record])
+
+
+def test_blank_excerpt_is_rejected():
+    record = Evidence("Water model", "TIP3P", 1, "")
+    assert verify_evidence([record], ["TIP3P was used."]) == ([], [record])
