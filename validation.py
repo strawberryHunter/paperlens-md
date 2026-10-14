@@ -16,14 +16,23 @@ class Finding:
     pages: tuple
 
 def verify_evidence(records, pages):
-    """Only accept results whose quoted value exists on the cited PDF page."""
+    """Reject candidates whose quoted excerpt or value is absent from the cited page."""
     valid, rejected = [], []
     for r in records:
-        page = getattr(r, "page", 0)
-        value = getattr(r, "value", "")
-        if (not isinstance(page, int) or page < 1 or page > len(pages)
-                or not value or not isinstance(value, str)
-                or re.search(r"\s+".join(map(re.escape, value.split())), " ".join(pages[page-1].split()), re.I) is None):
+        page = getattr(r, "page", None)
+        value = getattr(r, "value", None)
+        excerpt = getattr(r, "excerpt", None)
+        if (type(page) is not int or not 1 <= page <= len(pages)
+                or not isinstance(pages[page - 1], str)
+                or not isinstance(value, str) or not value.strip()
+                or not isinstance(excerpt, str) or not excerpt.strip()):
+            rejected.append(r)
+            continue
+        page_text = " ".join(pages[page - 1].split())
+        source_text = " ".join(excerpt.split())
+        quoted_value = " ".join(value.split())
+        if (source_text not in page_text
+                or quoted_value.casefold() not in source_text.casefold()):
             rejected.append(r)
         else:
             valid.append(r)
