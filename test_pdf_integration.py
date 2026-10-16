@@ -24,5 +24,8 @@ def test_lookalike_text_not_auto_certified():
     pages=["The CHARMM36m force field was not used."]
     result=report(analyze_pages(pages),pages)
     assert result["summary"]["candidate_matches"]==1
-    # Lexical presence is not proof the method was used.
-    assert all(r.field=="Force field" for r in result["valid"])
+    # A vacuous all([]) assertion would pass without checking quarantine.
+    assert not result["valid"]
+    assert len(result["context_review"]) == 1
+    assert result["context_review"][0].field == "Force field"
+    assert result["context_review"][0].value.lower() == "charmm36m"
