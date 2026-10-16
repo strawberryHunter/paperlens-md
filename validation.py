@@ -34,8 +34,26 @@ def verify_evidence(records, pages):
         if (source_text not in page_text
                 or quoted_value.casefold() not in source_text.casefold()):
             rejected.append(r)
-        else:
-            valid.append(r)
+            continue
+        start = getattr(r, "source_start", None)
+        end = getattr(r, "source_end", None)
+        if start is not None or end is not None:
+            if (type(start) is not int or type(end) is not int
+                    or not 0 <= start < end <= len(page_text)
+                    or page_text[start:end].casefold() != quoted_value.casefold()):
+                rejected.append(r)
+                continue
+            position = page_text.find(source_text)
+            aligned = False
+            while position != -1:
+                if position <= start and end <= position + len(source_text):
+                    aligned = True
+                    break
+                position = page_text.find(source_text, position + 1)
+            if not aligned:
+                rejected.append(r)
+                continue
+        valid.append(r)
     return valid, rejected
 
 def evaluate(records):
