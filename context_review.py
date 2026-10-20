@@ -16,9 +16,14 @@ POST_NEGATION = re.compile(
 def context_screen(record):
     """Return (status, reason). This does NOT establish scientific truth."""
     text = record.excerpt
-    match = re.search(re.escape(record.value), text, re.I)
-    if match is None:
+    # Whole-token matching avoids treating TIP3P2 as another occurrence of TIP3P.
+    matches = list(re.finditer(r"(?<!\w)" + re.escape(record.value) + r"(?!\w)", text, re.I))
+    if not matches:
         return "review", "Matched value not found in excerpt"
+    # Without occurrence binding, different mentions may have conflicting contexts.
+    if len(matches) > 1:
+        return "review", "Repeated value in excerpt; verify each mention against its original context"
+    match = matches[0]
 
     # Check language immediately after the quoted method term.
     suffix = text[match.end():match.end() + 110]
