@@ -24,3 +24,21 @@ def test_explicit_limitation_kept_in_report():
     result=report(analyze_pages(pages),pages)
     assert any(x.field=="MD engine" for x in result["valid"])
     assert any(x.field=="Force field" for x in result["context_review"])
+
+
+def test_postmention_negation_variations():
+    for phrase, field in [
+        ("GROMACS 2024.1 was not used.", "MD engine"),
+        ("The TIP3P water model was not used.", "Water model"),
+        ("The TIP3P water was not used.", "Water model"),
+        ("CHARMM36m was not employed.", "Force field"),
+    ]:
+        result = report(analyze_pages([phrase]), [phrase])
+        assert any(x.field == field for x in result["context_review"]), phrase
+        assert not any(x.field == field for x in result["valid"]), phrase
+
+
+def test_positive_context_still_extracts():
+    phrase = "The CHARMM36m force field was used."
+    result = report(analyze_pages([phrase]), [phrase])
+    assert any(x.field == "Force field" for x in result["valid"])
